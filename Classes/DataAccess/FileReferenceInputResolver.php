@@ -99,7 +99,7 @@ final readonly class FileReferenceInputResolver
                     continue;
                 }
 
-                $columnRefs[StringUtility::getUniqueId('NEW_ref')] = [
+                $columnRefs[StringUtility::getUniqueId('NEW')] = [
                     'uid_local'   => $fileUid,
                     'tablenames'  => $config->table,
                     'fieldname'   => $column,

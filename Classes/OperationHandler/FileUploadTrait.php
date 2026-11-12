@@ -103,7 +103,7 @@ trait FileUploadTrait
                     }
                 }
 
-                $refKey = StringUtility::getUniqueId('NEW_ref');
+                $refKey = StringUtility::getUniqueId('NEW');
                 $stored[$column][$refKey] = [
                     'uid_local'   => $falFile->getUid(),
                     'tablenames'  => $config->table,
@@ -124,11 +124,12 @@ trait FileUploadTrait
      * uid_foreign is set explicitly on each sys_file_reference entry so DataHandler
      * can write the correct parent link regardless of inline-relation remapping.
      *
-     * The parent column receives the NEW_ref placeholders, not the reference count.
+     * The parent column receives the NEW placeholders, not the reference count.
      * checkValueForFile() reads that column as a list of sys_file_reference uids, so
      * a count of 2 means "reference uid 2" and re-parents whatever record that
      * reference belonged to. DataHandler writes the count itself once the
-     * placeholders resolve.
+     * placeholders resolve. They must not contain an underscore: the remap reads
+     * "NEW_ref123" as uid "ref123" of a table "NEW", resolves nothing and writes 0.
      *
      * @param array<string, array<string, array>> $storedFiles column → [refKey → refData]
      * @param WriteContext                         $writeContext Same context as the parent write
