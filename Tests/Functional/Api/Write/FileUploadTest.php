@@ -137,6 +137,30 @@ final class FileUploadTest extends ApiFunctionalTestCase
         self::assertContains('UPLOAD_MAX_SIZE', $codes);
     }
 
+    public function testMultipartListReportsViolationsPerFileIndex(): void
+    {
+        $pdf    = $this->createUploadedFile('%PDF-1.4' . str_repeat("\x00", 92), 'doc.pdf', 'application/pdf');
+        $tooBig = $this->createUploadedFile(str_repeat('x', 21_000_000), 'big.pdf', 'application/pdf');
+
+        $response = $this->executeApiMultipartWriteRequestAs(
+            method:   'POST',
+            path:     '/_api/articles',
+            feUserId: 1,
+            fields:   ['title' => 'My Article'],
+            files:    ['downloads' => [$pdf, $tooBig]],
+        );
+
+        self::assertSame(422, $response->getStatusCode());
+
+        $body = $this->decodeResponseBody($response);
+        self::assertNotSame([], $body['violations']);
+        foreach ($body['violations'] as $violation) {
+            self::assertSame('downloads.1', $violation['propertyPath']);
+            self::assertStringStartsWith("'big.pdf': ", $violation['message']);
+        }
+        self::assertContains('UPLOAD_MAX_SIZE', array_column($body['violations'], 'code'));
+    }
+
     // ── Scalar field validation still applies ─────────────────────────────────
 
     public function testMultipartRespectsScalarFieldValidation(): void

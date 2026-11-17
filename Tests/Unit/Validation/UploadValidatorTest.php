@@ -138,6 +138,59 @@ final class UploadValidatorTest extends TestCase
         self::assertSame('UPLOAD_ERROR', $violations[0]['code']);
     }
 
+    public function testUploadErrorForPhpSizeLimitIsReportedAsMaxSize(): void
+    {
+        $this->setTcaAllowed('');
+        foreach ([\UPLOAD_ERR_INI_SIZE, \UPLOAD_ERR_FORM_SIZE] as $error) {
+            $file = $this->makeFile('', 'huge.jpg', 'image/jpeg', $error);
+
+            $violations = $this->validate($file, $this->makeUpload());
+
+            self::assertCount(1, $violations);
+            self::assertSame('UPLOAD_MAX_SIZE', $violations[0]['code']);
+            self::assertStringStartsWith("'huge.jpg': ", $violations[0]['message']);
+        }
+    }
+
+    // ── Which file and where ───────────────────────────────────────────────────
+
+    public function testMessageStartsWithClientFilename(): void
+    {
+        $this->setTcaAllowed('jpg,jpeg,png');
+        $file = $this->makeFile($this->pdfContent(), 'flyer.pdf', 'application/pdf');
+
+        $violations = $this->validate($file, $this->makeUpload());
+
+        self::assertNotSame([], $violations);
+        foreach ($violations as $violation) {
+            self::assertStringStartsWith("'flyer.pdf': ", $violation['message']);
+        }
+    }
+
+    public function testPropertyPathCanBeSetByCaller(): void
+    {
+        $this->setTcaAllowed('jpg,jpeg,png');
+        $file = $this->makeFile($this->pdfContent(), 'flyer.pdf', 'application/pdf');
+
+        $violations = $this->validator->validate($file, $this->makeUpload(), self::TABLE, self::COLUMN, self::COLUMN . '.2');
+
+        self::assertNotSame([], $violations);
+        self::assertSame([self::COLUMN . '.2'], array_values(array_unique(array_column($violations, 'propertyPath'))));
+    }
+
+    public function testMaxSizeMessageNamesTheLimit(): void
+    {
+        $this->setTcaAllowed('');
+        $file = $this->makeFile(str_repeat('x', 1_048_577), 'large.jpg', 'image/jpeg');
+
+        $violations = $this->validate($file, $this->makeUpload(maxSize: 1_048_576));
+
+        self::assertSame(
+            "'large.jpg': The file exceeds the maximum allowed size of 1 MB.",
+            $violations[0]['message'],
+        );
+    }
+
     // ── MIME type (from TCA allowed extensions) ───────────────────────────────
 
     public function testDisallowedMimeTypeReturnsViolation(): void

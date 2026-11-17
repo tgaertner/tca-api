@@ -32,6 +32,10 @@ trait FileUploadTrait
     /**
      * Validate all uploaded files against their column upload constraints.
      *
+     * A column sent as a list (`downloads[]`) reports its violations per file as
+     * `downloads.0`, `downloads.1`, … so a client can tell which file failed;
+     * a single file keeps the column as its path.
+     *
      * @param array<string, UploadedFile|list<UploadedFile>> $uploadedFiles
      * @return list<array{propertyPath: string, message: string, code: string}>
      */
@@ -45,14 +49,21 @@ trait FileUploadTrait
                 continue;
             }
 
-            $files = \is_array($fileOrFiles) ? $fileOrFiles : [$fileOrFiles];
-            foreach ($files as $file) {
+            $isList = \is_array($fileOrFiles);
+            $files  = $isList ? $fileOrFiles : [$fileOrFiles];
+            foreach ($files as $index => $file) {
                 $tmpPath = null;
                 try {
                     [$backed, $tmpPath] = $this->ensureFileBacked($file);
                     array_push(
                         $violations,
-                        ...$this->uploadValidator->validate($backed, $columnDef->upload, $config->table, $column),
+                        ...$this->uploadValidator->validate(
+                            $backed,
+                            $columnDef->upload,
+                            $config->table,
+                            $column,
+                            $isList ? $column . '.' . $index : $column,
+                        ),
                     );
                 } finally {
                     if ($tmpPath !== null && file_exists($tmpPath)) {

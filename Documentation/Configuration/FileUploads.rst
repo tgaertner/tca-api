@@ -168,7 +168,10 @@ Validation errors
 =================
 
 Upload violations return **422 Unprocessable Entity** in the same structured
-format as other validation errors:
+format as other validation errors. Each message starts with the client file
+name. A column sent as a list (``downloads[]``) reports each file under its
+index (``downloads.0``, ``downloads.1``, …), so a client can mark the file that
+failed; a single file keeps the column name as its path:
 
 ..  code-block:: json
 
@@ -180,12 +183,12 @@ format as other validation errors:
         "violations": [
             {
                 "propertyPath": "profile_photo",
-                "message": "The file type is not allowed.",
+                "message": "'portrait.pdf': The file type is not allowed.",
                 "code": "UPLOAD_MIME_TYPE"
             },
             {
-                "propertyPath": "profile_photo",
-                "message": "The file exceeds the maximum allowed size.",
+                "propertyPath": "downloads.1",
+                "message": "'brochure.pdf': The file exceeds the maximum allowed size of 20 MB.",
                 "code": "UPLOAD_MAX_SIZE"
             }
         ]
@@ -206,7 +209,8 @@ Violation codes
    * - ``UPLOAD_MIME_TYPE``
      - The detected MIME type is not permitted for this column.
    * - ``UPLOAD_MAX_SIZE``
-     - The file exceeds the ``maxSize`` limit configured in ``upload``.
+     - The file exceeds the ``maxSize`` limit configured in ``upload``, or
+       PHP rejected it as too large (``upload_max_filesize``, ``MAX_FILE_SIZE``).
    * - ``UPLOAD_EXTENSION``
      - The file extension is not in the list allowed by the TCA column.
 
